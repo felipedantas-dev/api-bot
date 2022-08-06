@@ -17,7 +17,5 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('telegram')
 ->controller(TelegramController::class)
 ->group(function() {
-
     Route::post('bot/fNn8hER6RRpMCjYzcFIcU4eIm58WcAQE/webhook', 'process');
-
 });

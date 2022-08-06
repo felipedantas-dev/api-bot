@@ -1,7 +1,7 @@
 {
     "name": "laravel/laravel",
     "type": "project",
-    "description": "The Laravel Framework.",
+    "description": "API Bot - DantasLab",
     "keywords": ["framework", "laravel"],
     "license": "MIT",
     "require": {
