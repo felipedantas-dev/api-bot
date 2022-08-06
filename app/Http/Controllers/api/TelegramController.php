@@ -32,13 +32,14 @@ class TelegramController extends Controller
 
             $request = json_decode((string) file_get_contents('php://input'));
         
-            $telegram = new Api("5523489756:AAF1k4hkaWHMrtjNI8PnIREuJ6YEHXFN4aM");
+            $telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
     
             $response = $this->telegramResponses->getResponse($request->message->text);
     
             $data = $telegram->sendMessage([
                 'chat_id' => $request->message->chat->id, 
-                'text' => $response
+                'text' => $response,
+                'parse_mode' => 'html'
             ]);
     
             return response()->json(["data" => $data], 200);
