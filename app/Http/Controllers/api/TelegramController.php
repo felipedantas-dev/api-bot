@@ -23,7 +23,7 @@ class TelegramController extends Controller
 
         try {
 
-            return response()->json(["data" => "data"], 200);
+            return response()->json(["data" => "alooo"], 200);
         
         } catch (Exception $e) {
 
