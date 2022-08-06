@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Helpers\Telegram\ResponsesHelper;
 use App\Http\Controllers\Controller;
 use Exception;
-use Illuminate\Http\Request;
+use Telegram\Bot\Api;
 
 class TelegramController extends Controller
 {
 
-    public function __construct ()
+    public function __construct(ResponsesHelper $telegramResponses)
     {
+        $this->telegramResponses = $telegramResponses;
+    }
+
+    public function index()
+    {
+        return response()->json(["data" => "Hello World"], 200);
     }
 
     /**
@@ -18,12 +25,23 @@ class TelegramController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function process ()
-    {
+    public function process()
+    {            
 
         try {
 
-            return response()->json(["data" => "alooo"], 200);
+            $request = json_decode((string) file_get_contents('php://input'));
+        
+            $telegram = new Api("5523489756:AAF1k4hkaWHMrtjNI8PnIREuJ6YEHXFN4aM");
+    
+            $response = $this->telegramResponses->getResponse($request->message->text);
+    
+            $data = $telegram->sendMessage([
+                'chat_id' => $request->message->chat->id, 
+                'text' => $response
+            ]);
+    
+            return response()->json(["data" => $data], 200);
         
         } catch (Exception $e) {
 
