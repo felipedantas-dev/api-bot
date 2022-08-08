@@ -4,7 +4,9 @@ namespace App\Http\Controllers\api;
 
 use App\Helpers\Telegram\ResponsesHelper;
 use App\Http\Controllers\Controller;
+use Error;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Telegram\Bot\Api;
 
 class TelegramController extends Controller
@@ -26,12 +28,17 @@ class TelegramController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function process()
-    {            
-
+    {
+        
         try {
 
             $request = json_decode((string) file_get_contents('php://input'));
-        
+            $headers = getallheaders();
+
+            if ($headers["X-Telegram-Bot-Api-Secret-Token"] != env("TELEGRAM_WEBHOOK_SECRET_TOKEN")) {
+                throw new Exception("WEBHOOK SECRET TOKEN INVÁLIDO");
+            }
+
             $telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
     
             $response = $this->telegramResponses->getResponse($request->message->text);
