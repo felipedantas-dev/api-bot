@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('telegram')
 ->controller(TelegramController::class)
-->middleware('auth:api')
 ->group(function() {
     Route::post('bot/webhook', 'process');
 });
