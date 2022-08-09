@@ -2,6 +2,10 @@
 
 namespace App\Helpers\Telegram;
 
+use App\Services\Correios\RastreioService;
+use Carbon\Carbon;
+use Telegram\Bot\Api;
+
 class ResponsesHelper
 {
 
@@ -16,35 +20,106 @@ class ResponsesHelper
 
     const OPTIONS = [
         "1" => [
-            "text" => "Você escolheu a opção para rastreamento de encomenda do Correios, por favor envie o código da encomenda."
+            "text" => "Você escolheu a opção para rastreamento de encomenda do Correios, copie o exemplo abaixo e envie com o seu código de rastreio:
+                        \n <i>!Rastreio <b>CD123456789BR</b></i>"
         ],
         "2" => [
             "text" => "Você escolheu a opção de consulta de CEP, por favor envie o número do CEP que deseja consultar."
         ]
     ];
+
     const REESEND_OPTION = "\n<i>Caso não seja a opção desejada, envie novamente <b>/start</b> e confira as opções novamente.</i>";
 
     const NOT_FOUND = "😢 Não consegui entender... Confira nossas funcionalidades enviando /start ou envie o número da funcionalidade que deseja.";
 
-    public function getResponse ($message)
+
+    public function __construct($request)
+    {
+        $this->telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
+        $this->message = $request->message->text;
+        $this->chat_id = $request->message->chat->id;
+    }
+
+    public function sendResponse()
     {
 
-        switch ($message) {
-            case array_key_exists($message, self::OPTIONS):
-                $response = self::OPTIONS[$message]["text"];
+        switch ($this->message) {
+            case array_key_exists($this->message, self::OPTIONS):
+                $response = self::OPTIONS[$this->message]["text"];
                 $response .= self::REESEND_OPTION;
+                $sendData = $this->sendMessage($response);
+
                 break;
 
-            case array_key_exists($message, self::START):
-                $response = self::START[$message]["text"];
+            case array_key_exists($this->message, self::START):
+                $response = self::START[$this->message]["text"];
+                $sendData = $this->sendMessage($response);
+                break;
+
+            //Entra na opção de código de rastreio
+            case str_contains(strtoupper($this->message), "!RASTREIO"):
+                $sendData = $this->getTrackingInfos(strtoupper($this->message));
                 break;
 
             default:
                 $response = self::NOT_FOUND;
+                $sendData = $this->sendMessage($response);
                 break;
         }
 
-        return $response;
+        return $sendData;
+    }
+
+
+    private function getTrackingInfos ($message)
+    {
+        $sendData = [];
+
+        $texts_message = explode(" ", $message);
+        $trackingCode = $this->getTrackingCode($texts_message);
+        $trackingData = (new RastreioService())->getTracking($trackingCode);
+
+        $trackingKey = array_search($trackingCode, array_column($trackingData->objetos, "codObjeto"));
+
+        foreach (array_reverse($trackingData->objetos[$trackingKey]->eventos) as $evento) {
+            array_push($sendData, $this->sendMessage($this->setTrackingResponse($evento)));
+        }
+
+        return $sendData;
+    }
+
+    private function setTrackingResponse ($event)
+    {
+        $status = $event->descricao == "Objeto entregue ao destinatário" ? "🟢" : ($event->descricao == "Objeto postado" ? "🟡" : "🛫");
+        $data = date('d/m/Y', strtotime($event->dtHrCriado));
+        $hora = date('H:i:s', strtotime($event->dtHrCriado));
+        return "{$status} <b>{$event->descricao}</b>
+                \n🚩 Local <b>{$event->unidade->endereco->cidade} - {$event->unidade->endereco->uf}</b>
+                \n📅 <i>Em <b>{$data}</b> às <b>{$hora}</b></i>";
+    }
+
+
+    private function getTrackingCode ($texts)
+    {
+        foreach ($texts as $text) {
+            if ($this->isTrackingCode($text)) {
+                return $text;
+            }
+        }
+    }
+
+    private function isTrackingCode ($var)
+    {
+        return str_contains(strtoupper($var), "BR");
+    }
+
+    private function sendMessage ($response)
+    {
+        return $this->telegram->sendMessage([
+            'chat_id' => $this->chat_id, 
+            'text' => $response,
+            'parse_mode' => 'html'
+        ]);
     }
 
 

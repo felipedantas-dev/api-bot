@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\api\CorreiosController;
 use App\Http\Controllers\api\TelegramController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,8 +23,7 @@ Route::prefix('telegram')
 
 
 Route::prefix('correios')
-->controller(TelegramController::class)
-->middleware('auth:api')
+->controller(CorreiosController::class)
 ->group(function() {
-    Route::post('bot/webhook', 'process');
+    Route::get('tracking/{trackingCode}', 'tracking');
 });

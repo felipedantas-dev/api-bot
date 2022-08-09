@@ -4,26 +4,17 @@ namespace App\Http\Controllers\api;
 
 use App\Helpers\Telegram\ResponsesHelper;
 use App\Http\Controllers\Controller;
-use Error;
 use Exception;
-use Illuminate\Support\Facades\DB;
-use Telegram\Bot\Api;
 
 class TelegramController extends Controller
 {
 
-    public function __construct(ResponsesHelper $telegramResponses)
+    public function __construct()
     {
-        $this->telegramResponses = $telegramResponses;
-    }
-
-    public function index()
-    {
-        return response()->json(["data" => "Hello World"], 200);
     }
 
     /**
-     * Display a listing of the comics.
+     * Process webhook bot api telegram
      *
      * @return \Illuminate\Http\Response
      */
@@ -38,18 +29,11 @@ class TelegramController extends Controller
             if ($headers["X-Telegram-Bot-Api-Secret-Token"] != env("TELEGRAM_WEBHOOK_SECRET_TOKEN")) {
                 throw new Exception("WEBHOOK SECRET TOKEN INVÁLIDO");
             }
-
-            $telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
     
-            $response = $this->telegramResponses->getResponse($request->message->text);
+            $telegramResponses = new ResponsesHelper($request);
+            $response = $telegramResponses->sendResponse();
     
-            $data = $telegram->sendMessage([
-                'chat_id' => $request->message->chat->id, 
-                'text' => $response,
-                'parse_mode' => 'html'
-            ]);
-    
-            return response()->json(["data" => $data], 200);
+            return response()->json(["data" => $response], 200);
         
         } catch (Exception $e) {
 
