@@ -97,7 +97,7 @@ class ResponsesHelper
 
     private function trackingIsInvalid($tracking)
     {
-        return array_key_exists("mensagem", (array) $tracking) && str_contains($tracking["mensagem"], "inválido");
+        return array_key_exists("mensagem", (array) $tracking) && (str_contains($tracking["mensagem"], "inválido") || str_contains($tracking["mensagem"], "não encontrado"));
     }
 
     private function setTrackingResponse ($event)
