@@ -34,8 +34,6 @@ class ResponsesHelper
 
     const INVALID_TRACKING = "😩 Não conseguimos encontrar seu objeto, por favor tente novamente com um código de rastreio válido.";
 
-    const DIVIDER_BAR = "\n";
-
     public function __construct($request)
     {
         $this->telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
@@ -86,13 +84,15 @@ class ResponsesHelper
             return $this->sendMessage(self::INVALID_TRACKING);
         }
 
-        $trackingMessage = "📫 Histórico do objeto de rastreio <b>{$trackingData->objetos[$trackingKey]->codObjeto}</b>\n\n";
+        $sendData = [];
+
+        array_push($sendData,$this->sendMessage("📫 Histórico do objeto de rastreio <b>{$trackingData->objetos[$trackingKey]->codObjeto}</b>\n\n"));
 
         foreach (array_reverse($trackingData->objetos[$trackingKey]->eventos) as $index => $evento) {
-            $trackingMessage .= $this->setTrackingResponse($evento, $index, count($trackingData->objetos[$trackingKey]->eventos) - 1);
+            array_push($sendData, $this->sendMessage($this->setTrackingResponse($evento)));
         }
 
-        return $this->sendMessage($trackingMessage);
+        return $sendData;
     }
 
     private function trackingIsInvalid($tracking)
@@ -100,7 +100,7 @@ class ResponsesHelper
         return array_key_exists("mensagem", (array) $tracking) && str_contains($tracking["mensagem"], "inválido");
     }
 
-    private function setTrackingResponse ($event, $index, $length)
+    private function setTrackingResponse ($event)
     {
         $status = $event->descricao == "Objeto entregue ao destinatário" ? "📪" : ($event->descricao == "Objeto postado" ? "📦" : "🚚");
         $data = date('d/m/Y', strtotime($event->dtHrCriado));
@@ -110,7 +110,7 @@ class ResponsesHelper
         $msg .= "\n📅 <i>{$data} às {$hora}</i>";
         $msg .= "\n🚩 Localizado em <b>{$event->unidade->endereco->cidade} - {$event->unidade->endereco->uf}</b>";
 
-        return $index != $length ? $msg ."\n". self::DIVIDER_BAR : $msg;
+        return $msg;
     }
 
 
