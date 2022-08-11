@@ -32,6 +32,9 @@ class ResponsesHelper
 
     const NOT_FOUND = "😢 Não consegui entender... Confira nossas funcionalidades enviando /start ou envie o número da funcionalidade que deseja.";
 
+    const INVALID_TRACKING = "😩 Não conseguimos encontrar seu objeto, por favor tente novamente com um código de rastreio válido.";
+
+    const DIVIDER_BAR = "\n";
 
     public function __construct($request)
     {
@@ -73,29 +76,41 @@ class ResponsesHelper
 
     private function getTrackingInfos ($message)
     {
-        $sendData = [];
-
         $texts_message = explode(" ", $message);
         $trackingCode = $this->getTrackingCode($texts_message);
         $trackingData = (new RastreioService())->getTracking($trackingCode);
 
         $trackingKey = array_search($trackingCode, array_column($trackingData->objetos, "codObjeto"));
 
-        foreach (array_reverse($trackingData->objetos[$trackingKey]->eventos) as $evento) {
-            array_push($sendData, $this->sendMessage($this->setTrackingResponse($evento)));
+        if ($this->trackingIsInvalid((array) $trackingData->objetos[$trackingKey])) {
+            return $this->sendMessage(self::INVALID_TRACKING);
         }
 
-        return $sendData;
+        $trackingMessage = "📫 Histórico do objeto de rastreio <b>{$trackingData->objetos[$trackingKey]->codObjeto}</b>\n\n";
+
+        foreach (array_reverse($trackingData->objetos[$trackingKey]->eventos) as $index => $evento) {
+            $trackingMessage .= $this->setTrackingResponse($evento, $index, count($trackingData->objetos[$trackingKey]->eventos) - 1);
+        }
+
+        return $this->sendMessage($trackingMessage);
     }
 
-    private function setTrackingResponse ($event)
+    private function trackingIsInvalid($tracking)
     {
-        $status = $event->descricao == "Objeto entregue ao destinatário" ? "🟢" : ($event->descricao == "Objeto postado" ? "🟡" : "🛫");
+        return array_key_exists("mensagem", (array) $tracking) && str_contains($tracking["mensagem"], "inválido");
+    }
+
+    private function setTrackingResponse ($event, $index, $length)
+    {
+        $status = $event->descricao == "Objeto entregue ao destinatário" ? "📪" : ($event->descricao == "Objeto postado" ? "📦" : "🚚");
         $data = date('d/m/Y', strtotime($event->dtHrCriado));
         $hora = date('H:i:s', strtotime($event->dtHrCriado));
-        return "{$status} <b>{$event->descricao}</b>
-                \n🚩 Local <b>{$event->unidade->endereco->cidade} - {$event->unidade->endereco->uf}</b>
-                \n📅 <i>Em <b>{$data}</b> às <b>{$hora}</b></i>";
+
+        $msg =  "\n{$status} <b>{$event->descricao}</b>";
+        $msg .= "\n📅 <i>{$data} às {$hora}</i>";
+        $msg .= "\n🚩 Localizado em <b>{$event->unidade->endereco->cidade} - {$event->unidade->endereco->uf}</b>";
+
+        return $index != $length ? $msg ."\n". self::DIVIDER_BAR : $msg;
     }
 
 
