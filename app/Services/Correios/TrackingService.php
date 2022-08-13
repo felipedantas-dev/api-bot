@@ -2,10 +2,10 @@
 
 namespace App\Services\Correios;
 
-use App\Helpers\Correios\RastreioRequest;
+use App\Helpers\Correios\TrackingRequest;
 use Exception;
 
-class RastreioService extends RastreioRequest
+class TrackingService extends TrackingRequest
 {
 
     public function getTracking ($trackingCode)

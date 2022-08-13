@@ -2,6 +2,8 @@
 
 namespace App\Helpers\Telegram;
 
+use App\Helpers\Correios\CEPHelper;
+use App\Helpers\Correios\TrackingHelper;
 use App\Services\Correios\RastreioService;
 use Carbon\Carbon;
 use Telegram\Bot\Api;
@@ -24,7 +26,8 @@ class ResponsesHelper
                         \n <i>!Rastreio <b>CD123456789BR</b></i>"
         ],
         "2" => [
-            "text" => "Você escolheu a opção de consulta de CEP, por favor envie o número do CEP que deseja consultar."
+            "text" => "Você escolheu a opção de consulta de CEP, por favor envie o número do CEP que deseja consultar, seguindo o exemplo abaixo:
+                        \n <i>!CEP <b>12345-678</b></i>"
         ]
     ];
 
@@ -33,10 +36,13 @@ class ResponsesHelper
     const NOT_FOUND = "😢 Não consegui entender... Confira nossas funcionalidades enviando /start ou envie o número da funcionalidade que deseja.";
 
     const INVALID_TRACKING = "😩 Não conseguimos encontrar seu objeto, por favor tente novamente com um código de rastreio válido.";
+    const INVALID_CEP = "😩 Não conseguimos encontrar o CEP digitado, por favor tente novamente com um CEP válido.";
 
     public function __construct($request)
     {
         $this->telegram = new Api(env("BOT_FDEV_TELEGRAM_TOKEN"));
+
+        $this->request = $request;
         $this->message = $request->message->text;
         $this->chat_id = $request->message->chat->id;
     }
@@ -59,9 +65,14 @@ class ResponsesHelper
 
             //Entra na opção de código de rastreio
             case str_contains(strtoupper($this->message), "!RASTREIO"):
-                $sendData = $this->getTrackingInfos(strtoupper($this->message));
+                $sendData = (new TrackingHelper($this->request))->getTrackingInfos();
                 break;
 
+            //Entra na opção de CPF
+            case str_contains(strtoupper($this->message), "!CEP"):
+                $sendData = (new CEPHelper($this->request))->getCEPInfos();
+                break;
+                
             default:
                 $response = self::NOT_FOUND;
                 $sendData = $this->sendMessage($response);
@@ -71,64 +82,7 @@ class ResponsesHelper
         return $sendData;
     }
 
-
-    private function getTrackingInfos ($message)
-    {
-        $texts_message = explode(" ", $message);
-        $trackingCode = $this->getTrackingCode($texts_message);
-        $trackingData = (new RastreioService())->getTracking($trackingCode);
-
-        $trackingKey = array_search($trackingCode, array_column($trackingData->objetos, "codObjeto"));
-
-        if ($this->trackingIsInvalid((array) $trackingData->objetos[$trackingKey])) {
-            return $this->sendMessage(self::INVALID_TRACKING);
-        }
-
-        $sendData = [];
-
-        array_push($sendData,$this->sendMessage("📫 Histórico do objeto de rastreio <b>{$trackingData->objetos[$trackingKey]->codObjeto}</b>\n\n"));
-
-        foreach (array_reverse($trackingData->objetos[$trackingKey]->eventos) as $index => $evento) {
-            array_push($sendData, $this->sendMessage($this->setTrackingResponse($evento)));
-        }
-
-        return $sendData;
-    }
-
-    private function trackingIsInvalid($tracking)
-    {
-        return array_key_exists("mensagem", (array) $tracking);
-    }
-
-    private function setTrackingResponse ($event)
-    {
-        $status = $event->descricao == "Objeto entregue ao destinatário" ? "📪" : ($event->descricao == "Objeto postado" ? "📦" : "🚚");
-        $data = date('d/m/Y', strtotime($event->dtHrCriado));
-        $hora = date('H:i:s', strtotime($event->dtHrCriado));
-
-        $msg =  "\n{$status} <b>{$event->descricao}</b>";
-        $msg .= "\n📅 <i>{$data} às {$hora}</i>";
-        $msg .= "\n🚩 Localizado em <b>{$event->unidade->endereco->cidade} - {$event->unidade->endereco->uf}</b>";
-
-        return $msg;
-    }
-
-
-    private function getTrackingCode ($texts)
-    {
-        foreach ($texts as $text) {
-            if ($this->isTrackingCode($text)) {
-                return $text;
-            }
-        }
-    }
-
-    private function isTrackingCode ($var)
-    {
-        return str_contains(strtoupper($var), "BR");
-    }
-
-    private function sendMessage ($response)
+    protected function sendMessage ($response)
     {
         return $this->telegram->sendMessage([
             'chat_id' => $this->chat_id, 
