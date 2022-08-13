@@ -35,7 +35,8 @@ class CEPHelper extends ResponsesHelper
 
     private function getCEPMessage ($data)
     {
-        $msg =  "\n🚩 <b>{$data->logradouro}</b> ({$data->complemento})";
+        $msg =  "\n🚩 <b>{$data->logradouro}</b>";
+        $msg .= !empty($data->complemento) ? " ({$data->complemento})": "";
         $msg .= "\n🗺 <b>{$data->bairro}</b>, <b>{$data->localidade}</b> - <b>{$data->uf}</b>";
         $msg .= "\n🟢 <i><b>IBGE</b>: {$data->ibge}</i>";
         $msg .= "\n📱 <i><b>DDD</b>: {$data->ddd}</i>";
