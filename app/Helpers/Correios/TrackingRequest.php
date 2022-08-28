@@ -12,7 +12,7 @@ class TrackingRequest
 
     public function getUrl ($end_point)
     {
-        return env("API_VIACEP_CEP") . (substr($end_point, 0, 1) == '/'
+        return env("API_CORREIOS_RASTREIO_V1") . (substr($end_point, 0, 1) == '/'
             ? $end_point
             : '/' . $end_point);
     }

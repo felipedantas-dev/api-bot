@@ -4,8 +4,6 @@ namespace App\Helpers\Telegram;
 
 use App\Helpers\Correios\CEPHelper;
 use App\Helpers\Correios\TrackingHelper;
-use App\Services\Correios\RastreioService;
-use Carbon\Carbon;
 use Telegram\Bot\Api;
 
 class ResponsesHelper

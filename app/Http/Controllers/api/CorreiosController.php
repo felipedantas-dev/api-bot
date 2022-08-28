@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use App\Services\Correios\RastreioService;
+use App\Services\Correios\TrackingService;
 use Exception;
 use Illuminate\Http\Request;
 
 class CorreiosController extends Controller
 {
 
-    public function __construct(RastreioService $rastreioService)
+    public function __construct(TrackingService $trackingService)
     {
-        $this->rastreioService = $rastreioService;
+        $this->trackingService = $trackingService;
     }
     
     /**
@@ -26,7 +26,7 @@ class CorreiosController extends Controller
     {
         try {
 
-            $dataTracking = $this->rastreioService->getTracking($trackingCode);
+            $dataTracking = $this->trackingService->getTracking($trackingCode);
 
             return response()->json(["data" => $dataTracking], 200);
 
